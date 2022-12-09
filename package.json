@@ -1,0 +1,21 @@
+{
+  "name": "ploopy",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "fork": "npx hardhat node --fork https://arb1.arbitrum.io/rpc"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "dotenv": "^16.0.3",
+    "ethers": "^5.7.2",
+    "hardhat": "^2.12.4",
+    "prettier": "^2.8.1",
+    "prettier-plugin-solidity": "^1.0.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.8.0"
+  }
+}
