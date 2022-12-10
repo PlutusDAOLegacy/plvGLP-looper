@@ -53,6 +53,8 @@ contract Ploopy is IPloopy, PloopyConstants, Ownable, IFlashLoanRecipient {
     });
 
     BALANCER_VAULT.flashLoan(IFlashLoanRecipient(this), tokens, loanAmounts, abi.encode(userData));
+
+    emit Looped(msg.sender, _plvGlpAmount, _leverage);
   }
 
   function receiveFlashLoan(

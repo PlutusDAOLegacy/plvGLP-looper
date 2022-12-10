@@ -13,6 +13,8 @@ interface IRegistry {
   function decrement(address _user, uint256 _amount) external returns (uint256 _decrementedAmount);
 
   event HandlerUpdated(address indexed _handler, bool _status);
+  event Incremented(address indexed _user, uint256 indexed _amount);
+  event Decremented(address indexed _user, uint256 indexed _amount);
   error UNAUTHORIZED();
 }
 
@@ -23,6 +25,8 @@ interface IPloopy {
     IERC20 borrowedToken;
     uint256 borrowedAmount;
   }
+
+  event Looped(address indexed _user, uint256 _plvGlpAmount, uint256 _leverage);
 
   error UNAUTHORIZED(string);
   error INVALID_LEVERAGE();

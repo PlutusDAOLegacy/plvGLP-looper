@@ -13,6 +13,7 @@ contract LodestarExemptionsTracker is IRegistry, Ownable2Step {
     unchecked {
       exemptPlvGlp[_user] += _amount;
       tvl += _amount;
+      emit Incremented(_user, _amount);
     }
   }
 
@@ -31,6 +32,7 @@ contract LodestarExemptionsTracker is IRegistry, Ownable2Step {
       }
 
       tvl -= _decrementedAmount;
+      emit Decremented(_user, _decrementedAmount);
     }
   }
 
