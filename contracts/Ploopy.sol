@@ -4,15 +4,20 @@ pragma solidity 0.8.17;
 import '@openzeppelin/contracts/access/Ownable.sol';
 import './interfaces/IFlashLoanRecipient.sol';
 import './PloopyConstants.sol';
+import { IRegistry } from './interfaces/Interfaces.sol';
 
 contract Ploopy is IPloopy, PloopyConstants, Ownable, IFlashLoanRecipient {
-  constructor() {
+  IRegistry public immutable exemptions;
+
+  constructor(IRegistry _exemptions) {
     // approve rewardRouter to spend USDC for minting GLP
     USDC.approve(address(REWARD_ROUTER_V2), type(uint256).max);
     // approve GlpDepositor to spend GLP for minting plvGLP
     sGLP.approve(address(GLP_DEPOSITOR), type(uint256).max);
     // approve lPLVGLP to spend plvGLP to mint lPLVGLP
     PLVGLP.approve(address(lPLVGLP), type(uint256).max);
+
+    exemptions = _exemptions;
   }
 
   function loop(uint256 _plvGlpAmount, uint16 _leverage) external {
@@ -27,6 +32,7 @@ contract Ploopy is IPloopy, PloopyConstants, Ownable, IFlashLoanRecipient {
       _leverage
     ) / 1e12; //usdc is 6 decimals
 
+    // Not enough USDC in balancer vault
     if (USDC.balanceOf(address(BALANCER_VAULT)) < loanAmount) revert FAILED('usdc<loan');
 
     // check approval to spend USDC (for paying back flashloan).
@@ -57,12 +63,12 @@ contract Ploopy is IPloopy, PloopyConstants, Ownable, IFlashLoanRecipient {
   ) external override {
     if (msg.sender != address(BALANCER_VAULT)) revert UNAUTHORIZED('!vault');
 
-    // additional checks?
-
     UserData memory data = abi.decode(userData, (UserData));
-    if (data.borrowedAmount != amounts[0] || data.borrowedToken != tokens[0]) revert FAILED('!chk');
+    if (
+      data.borrowedAmount != amounts[0] || data.borrowedToken != tokens[0] || data.user != tx.origin
+    ) revert FAILED('!chk');
 
-    // sanity check: flashloan has no fees
+    // balancer flashloans have no fees
     if (feeAmounts[0] > 0) revert FAILED('fee>0');
 
     // mint GLP. Approval needed.
@@ -81,19 +87,22 @@ contract Ploopy is IPloopy, PloopyConstants, Ownable, IFlashLoanRecipient {
 
     // mint lPLVGLP by depositing plvGLP. Approval needed.
     unchecked {
-      uint256 mintedFromBorrow = lPLVGLP.mint(PLVGLP.balanceOf(address(this)) - _oldPlvglpBal);
-      //TODO: store the amount minted from borrow, so we can potentially unwind this without fees
+      uint256 plvGlpMinted = PLVGLP.balanceOf(address(this)) - _oldPlvglpBal;
 
-      uint256 mintedFromUser = lPLVGLP.mint(data.plvGlpAmount);
+      // TODO whitelist contract in registry
+      // Store plvGLP minted from borrowed USDC
+      exemptions.increment(data.user, plvGlpMinted);
 
-      // transfer lPLVGLP minted to user
-      lPLVGLP.transfer(data.user, mintedFromBorrow + mintedFromUser);
+      uint256 lPlvGlpBalance = lPLVGLP.mint(data.plvGlpAmount + plvGlpMinted);
+
+      // transfer lPLVGLP balance to user
+      lPLVGLP.transfer(data.user, lPlvGlpBalance);
     }
 
     // call borrowBehalf to borrow USDC on behalf of user
     lUSDC.borrowBehalf(data.borrowedAmount, data.user);
 
-    // repay loan: msg.sender = vault
+    // repay loan. msg.sender = vault
     USDC.transferFrom(data.user, msg.sender, data.borrowedAmount);
   }
 
