@@ -3,6 +3,21 @@ pragma solidity 0.8.17;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
+interface IRegistry {
+  function exemptPlvGlp(address _user) external returns (uint256 _amount);
+
+  function tvl() external returns (uint256);
+
+  function increment(address _user, uint256 _amount) external;
+
+  function decrement(address _user, uint256 _amount) external returns (uint256 _decrementedAmount);
+
+  event HandlerUpdated(address indexed _handler, bool _status);
+  event Incremented(address indexed _user, uint256 indexed _amount);
+  event Decremented(address indexed _user, uint256 indexed _amount);
+  error UNAUTHORIZED();
+}
+
 interface IPloopy {
   struct UserData {
     address user;
@@ -10,6 +25,8 @@ interface IPloopy {
     IERC20 borrowedToken;
     uint256 borrowedAmount;
   }
+
+  event Looped(address indexed _user, uint256 _plvGlpAmount, uint256 _leverage);
 
   error UNAUTHORIZED(string);
   error INVALID_LEVERAGE();
